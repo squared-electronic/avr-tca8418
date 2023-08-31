@@ -1,4 +1,5 @@
-
+#ifndef TCA8418_h
+#define TCA8418_h
 
 class TCA8418 {
  public:
@@ -6,3 +7,5 @@ class TCA8418 {
   void setKeys();
   void handleInterupt();
 };
+
+#endif
