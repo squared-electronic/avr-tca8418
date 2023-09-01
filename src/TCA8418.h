@@ -30,12 +30,14 @@ class TCA8418 {
 
   uint8_t writeRegister(register_t register_address, uint8_t data);
   uint8_t readRegister(register_t register_address, uint8_t* out_data);
-  uint8_t readKeyEvents(uint8_t* fifo_out, uint8_t* fifo_items);
+  uint8_t readKeyEventsFifo();
   uint8_t readBit(const uint8_t* bytes, uint8_t bitIndex) const;
 
   uint8_t keysPushed[10];  // TODO not long enough buffer to support GPIOs
   uint8_t keysReleased[10];
   uint8_t keysStillPushed[10];
+  uint8_t pendingEvents[10];
+  uint8_t pendingEventsCount = 0;
 };
 
 #endif

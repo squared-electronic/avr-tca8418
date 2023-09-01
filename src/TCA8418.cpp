@@ -45,34 +45,14 @@ uint8_t TCA8418::handleInterupt() {
     return error;
   }
 
-  // Assume only K_INT for now TODO support all interrupts
+  // Assume only K_INT for now, TODO support all interrupts
   if ((intStatReg & 0b1111'1110) != 0) {
-    return 1;  // An interrupt we don't support happened;
+    return 1;  // An interrupt we don't support happened; leave.
   }
 
-  uint8_t fifo[10];
-  uint8_t fifoCount = 0;
-  error = readKeyEvents(fifo, &fifoCount);
+  error = readKeyEventsFifo();
   if (error != SUCCESS) {
     return error;
-  }
-
-  for (int i = 0; i < fifoCount; ++i) {
-    uint8_t keyCode = fifo[i] & 0b0111'1111;
-    key_event_type_t eventType = (key_event_type_t)(fifo[i] & 0b1000'0000);
-
-    uint8_t byteIndex = keyCode / 8;
-    uint8_t bitIndex = keyCode % 8;
-
-    if (eventType == key_event_type_t::PRESSED) {
-      keysPushed[byteIndex] |= (1 << bitIndex);
-    } else if (eventType == key_event_type_t::RELEASED) {
-      keysPushed[byteIndex] &= ~(1 << bitIndex);
-      keysReleased[byteIndex] |= (1 << bitIndex);
-    } else {
-      // Can never happen
-      return 1;
-    }
   }
 
   // Clear K_INT flag (others left untouched, TODO)
@@ -88,6 +68,23 @@ void TCA8418::updateButtonStates() {
     keysPushed[i] = 0;
     keysReleased[i] = 0;
   }
+
+  for (int i = 0; i < pendingEventsCount; ++i) {
+    uint8_t keyCode = pendingEvents[i] & 0b0111'1111;
+    key_event_type_t eventType = (key_event_type_t)(pendingEvents[i] & 0b1000'0000);
+
+    uint8_t byteIndex = keyCode / 8;
+    uint8_t bitIndex = keyCode % 8;
+
+    if (eventType == key_event_type_t::PRESSED) {
+      keysPushed[byteIndex] |= (1 << bitIndex);
+    } else if (eventType == key_event_type_t::RELEASED) {
+      keysPushed[byteIndex] &= ~(1 << bitIndex);
+      keysReleased[byteIndex] |= (1 << bitIndex);
+    } else {
+      // Can never happen
+    }
+  }
 }
 
 uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
@@ -96,26 +93,26 @@ uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
   return bytes[byteIndex] & (1 << bitInByteIndex);
 }
 
-uint8_t TCA8418::readKeyEvents(uint8_t* fifo_out, uint8_t* fifo_items) {
-  uint8_t keyEventReg = 0;
-  auto error = readRegister(register_t::KEY_LCK_EC, &keyEventReg);
+uint8_t TCA8418::readKeyEventsFifo() {
+  uint8_t keyLockReg = 0;
+  auto error = readRegister(register_t::KEY_LCK_EC, &keyLockReg);
 
   if (error != SUCCESS) {
     return error;
   }
 
-  *fifo_items = keyEventReg & 0x0F;
+  pendingEventsCount = keyLockReg & 0x0F;
 
-  for (uint8_t i = 0; i < *fifo_items; ++i) {
+  for (uint8_t i = 0; i < pendingEventsCount; ++i) {
     uint8_t keyEventReg = 0;
     error = readRegister(register_t::KEY_EVENT_A, &keyEventReg);
 
     if (error != SUCCESS) {
-      *fifo_items = 0;
+      pendingEventsCount = 0;
       return error;
     }
 
-    fifo_out[i] = keyEventReg;
+    pendingEvents[i] = keyEventReg;
   }
 
   return SUCCESS;
