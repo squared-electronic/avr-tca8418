@@ -14,7 +14,7 @@ void TCA8418::configureKeys() {
   // Each to value of 1
   // Any GPIs configured with a 1 in the GPI_EM1-3 Registers will also be part of the event FIFO.
   // uint8_t data[] = {0x03, 0x01, 0x05};
-  // ret_code_t err = tw_master_transmit(0x50, data, sizeof(data), false);
+  // uint8_t err = tw_master_transmit(0x50, data, sizeof(data), false);
 }
 
 bool TCA8418::wasKeyPressed(uint8_t keyCode) const { return readBit(keysPushed, keyCode); }
@@ -23,12 +23,12 @@ bool TCA8418::wasKeyReleased(uint8_t keyCode) const { return readBit(keysRelease
 
 bool TCA8418::isKeyHeld(uint8_t keyCode) const { return readBit(keysStillPushed, keyCode); }
 
-ret_code_t TCA8418::writeRegister(register_t register_address, uint8_t data) {
+uint8_t TCA8418::writeRegister(register_t register_address, uint8_t data) {
   uint8_t bytes[2] = {(uint8_t)register_address, data};
   return tw_master_transmit(I2C_ADDRESS, bytes, sizeof(bytes), false);
 }
 
-ret_code_t TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
+uint8_t TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
   auto error = tw_master_transmit_one(I2C_ADDRESS, (uint8_t)register_address, true);
   if (error != SUCCESS) {
     return error;
@@ -37,7 +37,7 @@ ret_code_t TCA8418::readRegister(register_t register_address, uint8_t* out_data)
   return error;
 }
 
-ret_code_t TCA8418::handleInterupt() {
+uint8_t TCA8418::handleInterupt() {
   // Read INT_STAT to find out what triggered the interrupt
   uint8_t intStatReg = 0;
   auto error = readRegister(register_t::INT_STAT, &intStatReg);
@@ -47,7 +47,7 @@ ret_code_t TCA8418::handleInterupt() {
 
   // Assume only K_INT for now TODO support all interrupts
   if ((intStatReg & 0b1111'1110) != 0) {
-    return SUCCESS;  // An interrupt we don't support happened; ignore
+    return 1;  // An interrupt we don't support happened;
   }
 
   uint8_t fifo[10];
@@ -76,11 +76,9 @@ ret_code_t TCA8418::handleInterupt() {
   }
 
   // Clear K_INT flag (others left untouched, TODO)
-  auto error = writeRegister(register_t::INT_STAT, intStatReg & ~(1));
+  error = writeRegister(register_t::INT_STAT, intStatReg & ~(1));
 
-  if (error != SUCCESS) {
-    return error;
-  }
+  return error;
 }
 
 void TCA8418::updateButtonStates() {
@@ -98,7 +96,7 @@ uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
   return bytes[byteIndex] & (1 << bitInByteIndex);
 }
 
-ret_code_t TCA8418::readKeyEvents(uint8_t* fifo_out, uint8_t* fifo_items) {
+uint8_t TCA8418::readKeyEvents(uint8_t* fifo_out, uint8_t* fifo_items) {
   uint8_t keyEventReg = 0;
   auto error = readRegister(register_t::KEY_LCK_EC, &keyEventReg);
 
@@ -119,4 +117,6 @@ ret_code_t TCA8418::readKeyEvents(uint8_t* fifo_out, uint8_t* fifo_items) {
 
     fifo_out[i] = keyEventReg;
   }
+
+  return SUCCESS;
 }
