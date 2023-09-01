@@ -63,8 +63,6 @@ uint8_t TCA8418::handleInterupt() {
 
 void TCA8418::updateButtonStates() {
   for (int i = 0; i < 8; ++i) {
-    keysPushed[i] &= ~(keysReleased[i]);
-    keysStillPushed[i] = keysPushed[i];
     keysPushed[i] = 0;
     keysReleased[i] = 0;
   }
@@ -73,14 +71,13 @@ void TCA8418::updateButtonStates() {
     uint8_t keyCode = pendingEvents[i] & 0b0111'1111;
     key_event_type_t eventType = (key_event_type_t)(pendingEvents[i] & 0b1000'0000);
 
-    uint8_t byteIndex = keyCode / 8;
-    uint8_t bitIndex = keyCode % 8;
-
     if (eventType == key_event_type_t::PRESSED) {
-      keysPushed[byteIndex] |= (1 << bitIndex);
+      setBit(keysPushed, keyCode);
+      setBit(keysStillPushed, keyCode);
     } else if (eventType == key_event_type_t::RELEASED) {
-      keysPushed[byteIndex] &= ~(1 << bitIndex);
-      keysReleased[byteIndex] |= (1 << bitIndex);
+      clearBit(keysPushed, keyCode);
+      clearBit(keysStillPushed, keyCode);
+      setBit(keysReleased, keyCode);
     } else {
       // Can never happen
     }
@@ -91,6 +88,18 @@ uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   return bytes[byteIndex] & (1 << bitInByteIndex);
+}
+
+uint8_t TCA8418::setBit(uint8_t* bytes, uint8_t bitNumber) const {
+  uint8_t byteIndex = bitNumber / 8;
+  uint8_t bitInByteIndex = bitNumber % 8;
+  bytes[byteIndex] |= (1 << bitInByteIndex);
+}
+
+uint8_t TCA8418::clearBit(uint8_t* bytes, uint8_t bitNumber) const {
+  uint8_t byteIndex = bitNumber / 8;
+  uint8_t bitInByteIndex = bitNumber % 8;
+  bytes[byteIndex] &= ~(1 << bitInByteIndex);
 }
 
 uint8_t TCA8418::readKeyEventsFifo() {
