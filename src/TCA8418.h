@@ -6,6 +6,9 @@ class TCA8418 {
   void begin();
   void setKeys();
   void handleInterupt();
+
+ private:
+  uint8_t readRegister(uint8_t address);
 };
 
 #endif
