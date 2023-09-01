@@ -1,5 +1,6 @@
 #include "TCA8418.h"
 
+#include <avr/interrupt.h>
 #include <twi_master.h>
 
 void TCA8418::begin() {
@@ -62,12 +63,15 @@ uint8_t TCA8418::handleInterupt() {
 }
 
 void TCA8418::updateButtonStates() {
-  for (int i = 0; i < 8; ++i) {
+  uint8_t sreg = SREG;
+  cli();
+
+  for (uint8_t i = 0; i < 8; ++i) {
     keysPushed[i] = 0;
     keysReleased[i] = 0;
   }
 
-  for (int i = 0; i < pendingEventsCount; ++i) {
+  for (uint8_t i = 0; i < pendingEventsCount; ++i) {
     uint8_t keyCode = pendingEvents[i] & 0b0111'1111;
     key_event_type_t eventType = (key_event_type_t)(pendingEvents[i] & 0b1000'0000);
 
@@ -82,6 +86,8 @@ void TCA8418::updateButtonStates() {
       // Can never happen
     }
   }
+
+  SREG = sreg;
 }
 
 uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
