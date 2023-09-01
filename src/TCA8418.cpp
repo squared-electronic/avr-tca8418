@@ -4,10 +4,9 @@
 #include <twi_master.h>
 
 void TCA8418::begin() {
-  // 7 AI Auto-increment for read and write operations; See below table for more information
   // 4 INT_CFG - processor interrupt is deasserted for 50 μs and reassert with pending interrupts
   // 0 KE_IEN - enabled; INT becomes asserted when a key event occurs
-  writeRegister(register_t::CFG, 0b1001'0001);
+  writeRegister(register_t::CFG, 0b0001'0001);
 }
 
 void TCA8418::configureKeys() {
@@ -73,7 +72,7 @@ void TCA8418::updateButtonStates() {
 
   for (uint8_t i = 0; i < pendingEventsCount; ++i) {
     uint8_t keyCode = pendingEvents[i] & 0b0111'1111;
-    key_event_type_t eventType = (key_event_type_t)(pendingEvents[i] & 0b1000'0000);
+    key_event_type_t eventType = (key_event_type_t)((pendingEvents[i] & 0b1000'0000) >> 7);
 
     if (eventType == key_event_type_t::PRESSED) {
       setBit(keysPushed, keyCode);
