@@ -45,7 +45,7 @@ uint8_t TCA8418::writeRegister(register_t register_address, uint8_t data) {
 }
 
 uint8_t TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
-  auto error = tw_master_transmit_one(I2C_ADDRESS, (uint8_t)register_address, true);
+  auto error = tw_master_transmit(I2C_ADDRESS, (uint8_t*)register_address, 1, true);
   if (error != SUCCESS) {
     return error;
   }
@@ -111,13 +111,13 @@ uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
   return bytes[byteIndex] & (1 << bitInByteIndex);
 }
 
-uint8_t TCA8418::setBit(uint8_t* bytes, uint8_t bitNumber) const {
+void TCA8418::setBit(uint8_t* bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   bytes[byteIndex] |= (1 << bitInByteIndex);
 }
 
-uint8_t TCA8418::clearBit(uint8_t* bytes, uint8_t bitNumber) const {
+void TCA8418::clearBit(uint8_t* bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   bytes[byteIndex] &= ~(1 << bitInByteIndex);
