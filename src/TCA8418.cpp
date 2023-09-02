@@ -9,12 +9,28 @@ void TCA8418::begin() {
   writeRegister(register_t::CFG, 0b0001'0001);
 }
 
-void TCA8418::configureKeys() {
-  // Set rows / cols in KP_GPIO.
-  // Each to value of 1
-  // Any GPIs configured with a 1 in the GPI_EM1-3 Registers will also be part of the event FIFO.
-  // uint8_t data[] = {0x03, 0x01, 0x05};
-  // uint8_t err = tw_master_transmit(0x50, data, sizeof(data), false);
+void TCA8418::configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count,
+                              uint8_t cols_count) {
+  uint8_t kpGpio1Reg = 0;
+  uint8_t kpGpio2Reg = 0;
+  uint8_t kpGpio3Reg = 0;
+
+  for (uint8_t i = 0; i < rows_count; ++i) {
+    kpGpio1Reg |= (1 << rows[i]);
+  }
+
+  for (uint8_t i = 0; i < cols_count; ++i) {
+    uint8_t col = cols[i];
+    if (col < 8) {
+      kpGpio2Reg |= (1 << cols[i]);
+    } else {
+      kpGpio3Reg |= (1 << cols[i]);
+    }
+  }
+
+  writeRegister(register_t::KP_GPIO1, kpGpio1Reg);
+  writeRegister(register_t::KP_GPIO2, kpGpio2Reg);
+  writeRegister(register_t::KP_GPIO3, kpGpio3Reg);
 }
 
 bool TCA8418::wasKeyPressed(uint8_t keyCode) const { return readBit(keysPushed, keyCode); }

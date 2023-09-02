@@ -8,7 +8,10 @@ class TCA8418 {
     CFG = 0x01,
     INT_STAT = 0x02,
     KEY_LCK_EC = 0x03,
-    KEY_EVENT_A = 0x04
+    KEY_EVENT_A = 0x04,
+    KP_GPIO1 = 0x1D,
+    KP_GPIO2 = 0x1E,
+    KP_GPIO3 = 0x1F,
   };
 
   enum class key_event_type_t : uint8_t {
@@ -18,7 +21,7 @@ class TCA8418 {
 
  public:
   void begin();
-  void configureKeys();
+  void configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count, uint8_t cols_count);
   void updateButtonStates();
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
