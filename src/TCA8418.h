@@ -12,6 +12,9 @@ class TCA8418 {
     KP_GPIO1 = 0x1D,
     KP_GPIO2 = 0x1E,
     KP_GPIO3 = 0x1F,
+    GPIO_ENG_EN1 = 0x1A,
+    GPIO_ENG_EN2 = 0x1B,
+    GPIO_ENG_EN3 = 0x1C,
   };
 
   enum class key_event_type_t : uint8_t {
@@ -19,9 +22,31 @@ class TCA8418 {
     PRESSED = 1,
   };
 
+  enum class gpio_pin_t : uint8_t {
+    ROW0 = 0,
+    ROW1 = 1,
+    ROW2 = 2,
+    ROW3 = 3,
+    ROW4 = 4,
+    ROW5 = 5,
+    ROW6 = 6,
+    ROW7 = 7,
+    COL0 = 8,
+    COL1 = 9,
+    COL2 = 10,
+    COL3 = 11,
+    COL4 = 12,
+    COL5 = 13,
+    COL6 = 14,
+    COL7 = 15,
+    COL8 = 16,
+    COL9 = 17,
+  };
+
  public:
   void begin();
   void configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count, uint8_t cols_count);
+  uint8_t configureGpio(gpio_pin_t* pins, uint8_t pins_count, bool enablePullup);
   void updateButtonStates();
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
@@ -31,6 +56,7 @@ class TCA8418 {
  private:
   const uint8_t I2C_ADDRESS = 0x34;
 
+  uint8_t configureGpioInterrupts(gpio_pin_t* pins, uint8_t pins_count);
   uint8_t writeRegister(register_t register_address, uint8_t data);
   uint8_t readRegister(register_t register_address, uint8_t* out_data);
   uint8_t readKeyEventsFifo();

@@ -33,6 +33,37 @@ void TCA8418::configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count,
   writeRegister(register_t::KP_GPIO3, kpGpio3Reg);
 }
 
+uint8_t TCA8418::configureGpio(gpio_pin_t* pins, uint8_t pins_count, bool enablePullup) {
+  uint8_t error = SUCCESS;
+  error = configureGpioInterrupts(pins, pins_count);
+  if (error != SUCCESS) {
+    return error;
+  }
+}
+
+uint8_t TCA8418::configureGpioInterrupts(gpio_pin_t* pins, uint8_t pins_count) {
+  uint8_t gpioInt1Reg = 0;
+  uint8_t gpioInt2Reg = 0;
+  uint8_t gpioInt3Reg = 0;
+
+  for (uint8_t i = 0; i < pins_count; ++i) {
+    uint8_t pin = static_cast<uint8_t>(pins[i]);
+    if (pin < 8) {
+      gpioInt1Reg |= (1 << pin);
+    } else if (pin < 16) {
+      gpioInt2Reg |= (1 << pin);
+    } else if (pin < 18) {
+      gpioInt3Reg |= (1 << pin);
+    }
+  }
+
+  uint8_t error = SUCCESS;
+  error |= writeRegister(register_t::GPIO_ENG_EN1, gpioInt1Reg);
+  error |= writeRegister(register_t::GPIO_ENG_EN2, gpioInt2Reg);
+  error |= writeRegister(register_t::GPIO_ENG_EN3, gpioInt3Reg);
+  return error;
+}
+
 bool TCA8418::wasKeyPressed(uint8_t keyCode) const { return readBit(keysPushed, keyCode); }
 
 bool TCA8418::wasKeyReleased(uint8_t keyCode) const { return readBit(keysReleased, keyCode); }
