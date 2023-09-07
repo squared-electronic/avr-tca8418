@@ -59,7 +59,7 @@ uint8_t TCA8418::configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_coun
   return SUCCESS;
 }
 
-uint8_t TCA8418::configureGpio(gpio_pin_t* pins, uint8_t pins_count, bool) {
+uint8_t TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
   ScopedInterruptLock2 lock;
   uint8_t reg_data_mask[3] = {0, 0, 0};
   createRegisterTripleMask(pins, pins_count, reg_data_mask);
@@ -95,7 +95,7 @@ uint8_t TCA8418::configureGpio(gpio_pin_t* pins, uint8_t pins_count, bool) {
   return SUCCESS;
 }
 
-void TCA8418::createRegisterTripleMask(gpio_pin_t* pins, uint8_t pins_count,
+void TCA8418::createRegisterTripleMask(pin_t* pins, uint8_t pins_count,
                                        uint8_t register_triple[3]) {
   for (uint8_t i = 0; i < pins_count; ++i) {
     uint8_t pin = static_cast<uint8_t>(pins[i]);
