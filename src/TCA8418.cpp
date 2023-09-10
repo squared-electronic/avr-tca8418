@@ -132,8 +132,9 @@ uint8_t TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8
   uint8_t registerData = 0;
   TRY_ERR(readRegister(register_address, &registerData));
 
-  uint8_t modification = (~mask) | data;
-  registerData &= modification;
+  registerData &= ~mask;
+  registerData |= (data & mask);
+
   TRY_ERR(writeRegister(register_address, registerData));
 
   return SUCCESS;
@@ -141,14 +142,14 @@ uint8_t TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8
 
 uint8_t TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
   ScopedInterruptLock2 lock;
-  TRY_ERR(tw_master_transmit(I2C_ADDRESS, (uint8_t*)register_address, 1, true));
+  TRY_ERR(tw_master_transmit_one(I2C_ADDRESS, static_cast<uint8_t>(register_address), true));
   TRY_ERR(tw_master_receive(I2C_ADDRESS, out_data, 1));
   return SUCCESS;
 }
 
 uint8_t TCA8418::handleInterupt() {
-  const uint8_t K_INT_BIT = 1;
-  const uint8_t GPI_INT_BIT = 2;
+  const uint8_t K_INT_BIT = 0;
+  const uint8_t GPI_INT_BIT = 1;
 
   // Read INT_STAT to find out what triggered the interrupt
   uint8_t intStatReg = 0;
