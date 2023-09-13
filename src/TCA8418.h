@@ -5,6 +5,9 @@
 
 class TCA8418 {
  public:
+  typedef uint8_t Error;
+  static const Error NO_ERROR = 0;
+
   enum class pin_t : uint8_t {
     ROW0 = 0,
     ROW1 = 1,
@@ -26,14 +29,14 @@ class TCA8418 {
     COL9 = 17,
   };
 
-  uint8_t begin();
-  uint8_t configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count, uint8_t cols_count);
-  uint8_t configureGpio(pin_t* pins, uint8_t pins_count, bool enablePullup);
+  Error begin();
+  Error configureKeypad(uint8_t* rows, uint8_t rows_count, uint8_t* cols, uint8_t cols_count);
+  Error configureGpio(pin_t* pins, uint8_t pins_count, bool enablePullup);
   void updateButtonStates();
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
   bool isKeyHeld(uint8_t keyCode) const;
-  uint8_t handleInterupt();
+  Error handleInterupt();
 
  private:
   enum class register_t : uint8_t {
@@ -70,10 +73,10 @@ class TCA8418 {
   };
 
   void createRegisterTripleMask(pin_t* pins, uint8_t pins_count, uint8_t register_triple[3]);
-  uint8_t writeRegister(register_t register_address, uint8_t data);
-  uint8_t modifyRegister(register_t register_address, uint8_t data, uint8_t mask);
-  uint8_t readRegister(register_t register_address, uint8_t* out_data);
-  uint8_t readKeyEventsFifo();
+  Error writeRegister(register_t register_address, uint8_t data);
+  Error modifyRegister(register_t register_address, uint8_t data, uint8_t mask);
+  Error readRegister(register_t register_address, uint8_t* out_data);
+  Error readKeyEventsFifo();
   void updateButtonState(uint8_t pendingEvent);
   uint8_t readBit(const uint8_t* bytes, uint8_t bitNumber) const;
   void setBit(uint8_t* bytes, uint8_t bitNumber) const;

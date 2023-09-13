@@ -25,14 +25,14 @@ ScopedInterruptLock2::~ScopedInterruptLock2() { SREG = SReg; }
     if (error) return error; \
   } while (0);
 
-uint8_t TCA8418::begin() {
+TCA8418::Error TCA8418::begin() {
   // 4 INT_CFG - processor interrupt is deasserted for 50 μs and reassert with pending interrupts
   TRY_ERR(writeRegister(register_t::CFG, 0b0001'0000));
-  return SUCCESS;
+  return NO_ERROR;
 }
 
-uint8_t TCA8418::configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_count,
-                                 uint8_t cols_count) {
+TCA8418::Error TCA8418::configureKeypad(uint8_t* rows, uint8_t rows_count, uint8_t* cols,
+                                        uint8_t cols_count) {
   uint8_t kpGpio1Reg = 0;
   uint8_t kpGpio2Reg = 0;
   uint8_t kpGpio3Reg = 0;
@@ -56,10 +56,10 @@ uint8_t TCA8418::configureKeypad(uint8_t* rows, uint8_t* cols, uint8_t rows_coun
   TRY_ERR(writeRegister(register_t::KP_GPIO3, kpGpio3Reg));
   TRY_ERR(modifyRegister(register_t::CFG, 1, 0x01));
 
-  return SUCCESS;
+  return NO_ERROR;
 }
 
-uint8_t TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
+TCA8418::Error TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
   ScopedInterruptLock2 lock;
   uint8_t reg_data_mask[3] = {0, 0, 0};
   createRegisterTripleMask(pins, pins_count, reg_data_mask);
@@ -92,7 +92,7 @@ uint8_t TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
   // Enable GPIO Interrupts
   TRY_ERR(modifyRegister(register_t::CFG, 1, 0x02));
 
-  return SUCCESS;
+  return NO_ERROR;
 }
 
 void TCA8418::createRegisterTripleMask(pin_t* pins, uint8_t pins_count,
@@ -122,13 +122,13 @@ bool TCA8418::readKeyBit(const uint8_t* bytes, uint8_t rawKeyCode) const {
   return readBit(bytes, keyIndex);
 }
 
-uint8_t TCA8418::writeRegister(register_t register_address, uint8_t data) {
+TCA8418::Error TCA8418::writeRegister(register_t register_address, uint8_t data) {
   ScopedInterruptLock2 lock;
   uint8_t bytes[2] = {(uint8_t)register_address, data};
   return tw_master_transmit(I2C_ADDRESS, bytes, sizeof(bytes), false);
 }
 
-uint8_t TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8_t mask) {
+TCA8418::Error TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8_t mask) {
   uint8_t registerData = 0;
   TRY_ERR(readRegister(register_address, &registerData));
 
@@ -137,17 +137,17 @@ uint8_t TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8
 
   TRY_ERR(writeRegister(register_address, registerData));
 
-  return SUCCESS;
+  return NO_ERROR;
 }
 
-uint8_t TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
+TCA8418::Error TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
   ScopedInterruptLock2 lock;
   TRY_ERR(tw_master_transmit_one(I2C_ADDRESS, static_cast<uint8_t>(register_address), true));
   TRY_ERR(tw_master_receive(I2C_ADDRESS, out_data, 1));
-  return SUCCESS;
+  return NO_ERROR;
 }
 
-uint8_t TCA8418::handleInterupt() {
+TCA8418::Error TCA8418::handleInterupt() {
   const uint8_t K_INT_BIT = 0;
   const uint8_t GPI_INT_BIT = 1;
 
@@ -164,7 +164,7 @@ uint8_t TCA8418::handleInterupt() {
   // Acknowledge interrupt and clear flags
   TRY_ERR(writeRegister(register_t::INT_STAT, 0xFF));
 
-  return SUCCESS;
+  return NO_ERROR;
 }
 
 void TCA8418::updateButtonStates() {
@@ -243,7 +243,7 @@ uint8_t TCA8418::readKeyEventsFifo() {
 
   pendingEventsCount = eventsCount;
 
-  return SUCCESS;
+  return NO_ERROR;
 }
 
 void TCA8418::updateButtonState(uint8_t pendingEvent) {
