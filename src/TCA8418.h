@@ -36,7 +36,7 @@ class TCA8418 {
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
   bool isKeyHeld(uint8_t keyCode) const;
-  Error handleInterupt();
+  Error handleInterrupt();
 
  private:
   enum class register_t : uint8_t {

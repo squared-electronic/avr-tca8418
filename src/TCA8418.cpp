@@ -147,7 +147,7 @@ TCA8418::Error TCA8418::readRegister(register_t register_address, uint8_t* out_d
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::handleInterupt() {
+TCA8418::Error TCA8418::handleInterrupt() {
   const uint8_t K_INT_BIT = 0;
   const uint8_t GPI_INT_BIT = 1;
 
