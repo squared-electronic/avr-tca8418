@@ -24,13 +24,13 @@ This is a driver for the TCA8418 for AVR microcontrollers.
 - Add an interrupt vector, and call `handleInterrupt` inside
 - Place `updateButtonStates` at the beginning of the main loop to process any pending interrupt events to be observable by the API on this loop
 
-The `wasKeyPressed` and similar API is guaranteed to only return `true` once, then be false after the next call ot `updateButtonStates`, unless the key is re-pressed. Use `isKeyHeld` to detect holds. This prevents duplicate events on checking for a key press each on each loop.
+The `wasKeyPressed` and similar API is guaranteed to only return `true` once, then be false after the next call to `updateButtonStates`, unless the key is re-pressed. Use `isKeyHeld` to detect holds. This prevents duplicate events on checking for a key press on each loop.
 
-The driver guarantees each iteration of the main loop is completed with the same information. For example, if an interrupt arrives in the middle of the main loop, no state changes will be observed until the start of the next loop. Place `updateButtonStates` at the start of the main loop to sync any pending events.
+The driver guarantees each iteration of the main loop is completed with the same information. For example, if an interrupt arrives in the middle of the main loop, no state changes will be observed until after the next call to `updateButtonStates`.
 
 The driver includes a small I2C wrapper (modified from https://github.com/Sovichea/avr-i2c-library) and expects the user to initialize the I2C bus to their application's needs.
 
-## Example
+## ATmega324 Example
 
 ```cpp
 #include <TCA8418.h>
