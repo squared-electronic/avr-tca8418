@@ -2,7 +2,8 @@
 
 #include <avr/interrupt.h>
 #include <string.h>
-#include <twi_master.h>
+
+#include "twi/twi_master.h"
 
 struct ScopedInterruptLock2 {
   ScopedInterruptLock2();
@@ -17,7 +18,9 @@ ScopedInterruptLock2::ScopedInterruptLock2() {
   cli();
 }
 
-ScopedInterruptLock2::~ScopedInterruptLock2() { SREG = SReg; }
+ScopedInterruptLock2::~ScopedInterruptLock2() {
+  SREG = SReg;
+}
 
 #define TRY_ERR(function)    \
   do {                       \
@@ -26,12 +29,13 @@ ScopedInterruptLock2::~ScopedInterruptLock2() { SREG = SReg; }
   } while (0);
 
 TCA8418::Error TCA8418::begin() {
-  // 4 INT_CFG - processor interrupt is deasserted for 50 μs and reassert with pending interrupts
+  // 4 INT_CFG - processor interrupt is deasserted for 50 μs and reassert with
+  // pending interrupts
   TRY_ERR(writeRegister(register_t::CFG, 0b0001'0000));
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::configureKeypad(uint8_t* rows, uint8_t rows_count, uint8_t* cols,
+TCA8418::Error TCA8418::configureKeypad(uint8_t *rows, uint8_t rows_count, uint8_t *cols,
                                         uint8_t cols_count) {
   uint8_t kpGpio1Reg = 0;
   uint8_t kpGpio2Reg = 0;
@@ -59,7 +63,7 @@ TCA8418::Error TCA8418::configureKeypad(uint8_t* rows, uint8_t rows_count, uint8
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
+TCA8418::Error TCA8418::configureGpio(pin_t *pins, uint8_t pins_count, bool) {
   ScopedInterruptLock2 lock;
   uint8_t reg_data_mask[3] = {0, 0, 0};
   createRegisterTripleMask(pins, pins_count, reg_data_mask);
@@ -84,7 +88,8 @@ TCA8418::Error TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
   TRY_ERR(modifyRegister(register_t::GPIO_DIR2, 0x00, reg_data_mask[1]));
   TRY_ERR(modifyRegister(register_t::GPIO_DIR3, 0x00, reg_data_mask[2]));
 
-  // Set interrupt mode high to low transition (GPIO_INT_LVL1–3) write 0s here (high to low)
+  // Set interrupt mode high to low transition (GPIO_INT_LVL1–3) write 0s here
+  // (high to low)
   TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL1, 0x00, reg_data_mask[0]));
   TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL2, 0x00, reg_data_mask[1]));
   TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL3, 0x00, reg_data_mask[2]));
@@ -95,7 +100,7 @@ TCA8418::Error TCA8418::configureGpio(pin_t* pins, uint8_t pins_count, bool) {
   return NO_ERROR;
 }
 
-void TCA8418::createRegisterTripleMask(pin_t* pins, uint8_t pins_count,
+void TCA8418::createRegisterTripleMask(pin_t *pins, uint8_t pins_count,
                                        uint8_t register_triple[3]) {
   for (uint8_t i = 0; i < pins_count; ++i) {
     uint8_t pin = static_cast<uint8_t>(pins[i]);
@@ -109,13 +114,19 @@ void TCA8418::createRegisterTripleMask(pin_t* pins, uint8_t pins_count,
   }
 }
 
-bool TCA8418::wasKeyPressed(uint8_t keyCode) const { return readKeyBit(keysPushed, keyCode); }
+bool TCA8418::wasKeyPressed(uint8_t keyCode) const {
+  return readKeyBit(keysPushed, keyCode);
+}
 
-bool TCA8418::wasKeyReleased(uint8_t keyCode) const { return readKeyBit(keysReleased, keyCode); }
+bool TCA8418::wasKeyReleased(uint8_t keyCode) const {
+  return readKeyBit(keysReleased, keyCode);
+}
 
-bool TCA8418::isKeyHeld(uint8_t keyCode) const { return readKeyBit(keysStillPushed, keyCode); }
+bool TCA8418::isKeyHeld(uint8_t keyCode) const {
+  return readKeyBit(keysStillPushed, keyCode);
+}
 
-bool TCA8418::readKeyBit(const uint8_t* bytes, uint8_t rawKeyCode) const {
+bool TCA8418::readKeyBit(const uint8_t *bytes, uint8_t rawKeyCode) const {
   uint8_t keyIndex = 0;
   auto keyType = mapKeyCodeToArray(rawKeyCode, &keyIndex);
   if (keyType == keycode_type_t::UNKNOWN) return false;
@@ -140,7 +151,7 @@ TCA8418::Error TCA8418::modifyRegister(register_t register_address, uint8_t data
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::readRegister(register_t register_address, uint8_t* out_data) {
+TCA8418::Error TCA8418::readRegister(register_t register_address, uint8_t *out_data) {
   ScopedInterruptLock2 lock;
   TRY_ERR(tw_master_transmit_one(I2C_ADDRESS, static_cast<uint8_t>(register_address), true));
   TRY_ERR(tw_master_receive(I2C_ADDRESS, out_data, 1));
@@ -180,19 +191,19 @@ void TCA8418::updateButtonStates() {
   pendingEventsCount = 0;
 }
 
-uint8_t TCA8418::readBit(const uint8_t* bytes, uint8_t bitNumber) const {
+uint8_t TCA8418::readBit(const uint8_t *bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   return bytes[byteIndex] & (1 << bitInByteIndex);
 }
 
-void TCA8418::setBit(uint8_t* bytes, uint8_t bitNumber) const {
+void TCA8418::setBit(uint8_t *bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   bytes[byteIndex] |= (1 << bitInByteIndex);
 }
 
-void TCA8418::clearBit(uint8_t* bytes, uint8_t bitNumber) const {
+void TCA8418::clearBit(uint8_t *bytes, uint8_t bitNumber) const {
   uint8_t byteIndex = bitNumber / 8;
   uint8_t bitInByteIndex = bitNumber % 8;
   bytes[byteIndex] &= ~(1 << bitInByteIndex);
@@ -209,7 +220,7 @@ TCA8418::keycode_type_t TCA8418::classifyKeycode(uint8_t keyCode) const {
 }
 
 TCA8418::keycode_type_t TCA8418::mapKeyCodeToArray(uint8_t rawKeyCode,
-                                                   uint8_t* outCorrectedCode) const {
+                                                   uint8_t *outCorrectedCode) const {
   auto type = classifyKeycode(rawKeyCode);
 
   if (type == keycode_type_t::KEYPAD) {

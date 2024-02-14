@@ -1,0 +1,27 @@
+[binaries]
+c = 'avr-gcc'
+cpp = 'avr-g++'
+ar = 'avr-gcc-ar'
+strip = 'avr-strip'
+
+[built-in options]
+cpp_args = [
+  '-I/home/james/local/avr/avr/include/',
+  '--param=min-pagesize=0',
+  '-fno-exceptions',
+  '-ffunction-sections',
+  '-fdata-sections',
+  ]
+c_args = [
+  '-I/home/james/local/avr/avr/include/',
+  '--param=min-pagesize=0',
+  '-fno-exceptions',
+  '-ffunction-sections',
+  '-fdata-sections',
+  ]
+
+[host_machine]
+system = 'baremetal'
+cpu_family = 'avr'
+cpu = 'atmega'
+endian = 'none'
