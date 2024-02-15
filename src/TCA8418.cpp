@@ -33,8 +33,13 @@ TCA8418::Error TCA8418::begin(const Config *c) {
   // pending interrupts
   TRY_ERR(writeRegister(register_t::CFG, 0b0001'0000));
 
-  TRY_ERR(configureKeypad(&c->Keypad));
-  TRY_ERR(configureGpioInputs(&c->GpioInput));
+  if (c->Keypad.Rows != nullptr && c->Keypad.Cols != nullptr) {
+    TRY_ERR(configureKeypad(&c->Keypad));
+  }
+
+  if (c->GpioInput.Pins != nullptr) {
+    TRY_ERR(configureGpioInputs(&c->GpioInput));
+  }
 
   return NO_ERROR;
 }

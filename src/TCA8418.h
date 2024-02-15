@@ -62,9 +62,9 @@ class TCA8418 {
     } Keypad;
 
     struct GpioIn_ {
-      bool InterruptOnRisingEdge;
-      bool EnablePullups;
-      bool EnableDebounce;
+      bool InterruptOnRisingEdge = false;
+      bool EnablePullups = true;
+      bool EnableDebounce = true;
       TCA8418::pin_t* Pins = nullptr;
       uint8_t PinsCount = 0;
     } GpioInput;
