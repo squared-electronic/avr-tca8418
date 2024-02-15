@@ -11,11 +11,17 @@ This is a driver for the TCA8418 for AVR microcontrollers.
 - Interrupt-driven only
 - Reports key presses, releases, and holds.
 - Properly reports multi-key presses, holds, and releases
+- Support GPIO interrupt-driven inputs
 - All hardware row and column keypad configurations supported
 - `wasKeyPressed`, `wasKeyReleased`, `isKeyHeld` simple API
 - 46 bytes of SRAM required for full for 80-key and 18-GPIO map space
 - Provides error codes on all I2C operations which may fail
 - Disables interrupts around all I2C communication to prevent reading/writing garbage
+
+## Not Supported
+
+- GPIO Outputs
+- Keypad lock / unlock features
 
 ## Usage
 
@@ -34,6 +40,8 @@ The driver includes a small I2C wrapper (modified from https://github.com/Sovich
 
 ```cpp
 #include <TCA8418.h>
+#include <avr/interrupt.h>
+#include <avr/io.h>
 
 void initI2c() {
   // set pullups for SDA / SCL
@@ -63,25 +71,40 @@ int main() {
   initInterrupts();
   sei();
 
-  uint8_t rows[] = {0, 1, 2, 3};
-  uint8_t cols[] = {0, 1, 2};
+  TCA8418::row_t key_rows[] = {TCA8418::row_t::ROW0, TCA8418::row_t::ROW1, TCA8418::row_t::ROW2,
+                               TCA8418::row_t::ROW3};
 
-  auto error = Keypad.begin();
-  if (error) {
-    // handle error...
-  }
+  TCA8418::col_t key_cols[] = {TCA8418::col_t::COL0, TCA8418::col_t::COL1};
 
-  error = Keypad.configureKeypad(rows, 4, cols, 3);
+  TCA8418::pin_t gpios[] = {TCA8418::pin_t::COL6, TCA8418::pin_t::COL7};
+
+  TCA8418::Config c = {
+      .Keypad =
+          {
+              .Rows = key_rows,
+              .Cols = key_cols,
+              .RowsCount = sizeof(key_rows) / sizeof(key_rows[0]),
+              .ColsCount = sizeof(key_cols) / sizeof(key_cols[0]),
+          },
+      .GpioInput =
+          {
+              .InterruptOnRisingEdge = false,
+              .EnablePullups = false,
+              .EnableDebounce = true,
+              .Pins = gpios,
+              .PinsCount = sizeof(gpios) / sizeof(gpios[0]),
+          },
+  };
+
+  auto error = Keypad.begin(&c);
+
   if (error) {
-    // handle error...
+    // Handle error...
   }
 
   // Key codes reported directly from hardware
   const uint8_t keyCodes[] = {
-       1,  2,  3,
-      11, 12, 13,
-      21, 22, 23,
-      31, 32, 33,
+      1, 2, 3, 11, 12, 13, 21, 22, 23, 31, 32, 33,
   };
 
   while (1) {
@@ -100,7 +123,6 @@ int main() {
 }
 
 ISR(INT1_vect) {
-    Keypad.handleInterrupt();
+  Keypad.handleInterrupt();
 }
-
 ```

@@ -8,6 +8,30 @@ class TCA8418 {
   typedef uint8_t Error;
   static const Error NO_ERROR = 0;
 
+  enum class row_t : uint8_t {
+    ROW0 = 0,
+    ROW1 = 1,
+    ROW2 = 2,
+    ROW3 = 3,
+    ROW4 = 4,
+    ROW5 = 5,
+    ROW6 = 6,
+    ROW7 = 7,
+  };
+
+  enum class col_t : uint8_t {
+    COL0 = 8,
+    COL1 = 9,
+    COL2 = 10,
+    COL3 = 11,
+    COL4 = 12,
+    COL5 = 13,
+    COL6 = 14,
+    COL7 = 15,
+    COL8 = 16,
+    COL9 = 17,
+  };
+
   enum class pin_t : uint8_t {
     ROW0 = 0,
     ROW1 = 1,
@@ -29,9 +53,24 @@ class TCA8418 {
     COL9 = 17,
   };
 
-  Error begin();
-  Error configureKeypad(uint8_t* rows, uint8_t rows_count, uint8_t* cols, uint8_t cols_count);
-  Error configureGpio(pin_t* pins, uint8_t pins_count, bool enablePullup);
+  struct Config {
+    struct Keypad_ {
+      TCA8418::row_t* Rows = nullptr;
+      TCA8418::col_t* Cols = nullptr;
+      uint8_t RowsCount = 0;
+      uint8_t ColsCount = 0;
+    } Keypad;
+
+    struct GpioIn_ {
+      bool InterruptOnRisingEdge;
+      bool EnablePullups;
+      bool EnableDebounce;
+      TCA8418::pin_t* Pins = nullptr;
+      uint8_t PinsCount = 0;
+    } GpioInput;
+  };
+
+  Error begin(const Config* c);
   void updateButtonStates();
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
@@ -59,6 +98,9 @@ class TCA8418 {
     GPIO_INT_LVL1 = 0x26,
     GPIO_INT_LVL2 = 0x27,
     GPIO_INT_LVL3 = 0x28,
+    GPIO_PULL1 = 0x2C,
+    GPIO_PULL2 = 0x2D,
+    GPIO_PULL3 = 0x2E,
   };
 
   enum class key_event_type_t : uint8_t {
@@ -72,6 +114,8 @@ class TCA8418 {
     GPIO = 2,
   };
 
+  Error configureKeypad(const TCA8418::Config::Keypad_* config);
+  Error configureGpioInputs(const TCA8418::Config::GpioIn_* config);
   void createRegisterTripleMask(pin_t* pins, uint8_t pins_count, uint8_t register_triple[3]);
   Error writeRegister(register_t register_address, uint8_t data);
   Error modifyRegister(register_t register_address, uint8_t data, uint8_t mask);

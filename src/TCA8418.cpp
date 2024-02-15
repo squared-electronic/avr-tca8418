@@ -28,33 +28,39 @@ ScopedInterruptLock2::~ScopedInterruptLock2() {
     if (error) return error; \
   } while (0);
 
-TCA8418::Error TCA8418::begin() {
+TCA8418::Error TCA8418::begin(const Config *c) {
   // 4 INT_CFG - processor interrupt is deasserted for 50 μs and reassert with
   // pending interrupts
   TRY_ERR(writeRegister(register_t::CFG, 0b0001'0000));
+
+  TRY_ERR(configureKeypad(&c->Keypad));
+  TRY_ERR(configureGpioInputs(&c->GpioInput));
+
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::configureKeypad(uint8_t *rows, uint8_t rows_count, uint8_t *cols,
-                                        uint8_t cols_count) {
+TCA8418::Error TCA8418::configureKeypad(const TCA8418::Config::Keypad_ *config) {
   uint8_t kpGpio1Reg = 0;
   uint8_t kpGpio2Reg = 0;
   uint8_t kpGpio3Reg = 0;
 
-  for (uint8_t i = 0; i < rows_count; ++i) {
-    kpGpio1Reg |= (1 << rows[i]);
+  for (uint8_t i = 0; i < config->RowsCount; ++i) {
+    uint8_t row = static_cast<uint8_t>(config->Rows[i]);
+    kpGpio1Reg |= (1 << row);
   }
 
-  for (uint8_t i = 0; i < cols_count; ++i) {
-    uint8_t col = cols[i];
+  for (uint8_t i = 0; i < config->ColsCount; ++i) {
+    uint8_t col = static_cast<uint8_t>(config->Cols[i]);
     if (col < 8) {
-      kpGpio2Reg |= (1 << cols[i]);
-    } else {
-      kpGpio3Reg |= (1 << cols[i]);
+      kpGpio2Reg |= (1 << col);
+    } else if (col == 8) {
+      kpGpio3Reg |= (1 << 0);
+    } else if (col == 9) {
+      kpGpio3Reg |= (1 << 1);
     }
   }
 
-  // Enable rows / cols and  Keypad interrupts
+  // Set these rows / cols as keypad scanned; enable interrupts
   TRY_ERR(writeRegister(register_t::KP_GPIO1, kpGpio1Reg));
   TRY_ERR(writeRegister(register_t::KP_GPIO2, kpGpio2Reg));
   TRY_ERR(writeRegister(register_t::KP_GPIO3, kpGpio3Reg));
@@ -63,10 +69,15 @@ TCA8418::Error TCA8418::configureKeypad(uint8_t *rows, uint8_t rows_count, uint8
   return NO_ERROR;
 }
 
-TCA8418::Error TCA8418::configureGpio(pin_t *pins, uint8_t pins_count, bool) {
+TCA8418::Error TCA8418::configureGpioInputs(const TCA8418::Config::GpioIn_ *config) {
   ScopedInterruptLock2 lock;
   uint8_t reg_data_mask[3] = {0, 0, 0};
-  createRegisterTripleMask(pins, pins_count, reg_data_mask);
+  createRegisterTripleMask(config->Pins, config->PinsCount, reg_data_mask);
+
+  // Set the pins to be 0s in the corresponding pin's register
+  // Enable the proper interrupt for that pin in GPIO_INT_ENx
+  // Enable the key to be added to fifo; Set 1 in the GPI_EM register
+  // Set the interrupt direction trigger level in GPIO_INT_LVLn
 
   // Set as GPIO, instead of keypad (KP_GPIO1–3), write 0s here
   TRY_ERR(modifyRegister(register_t::KP_GPIO1, 0x00, reg_data_mask[0]));
@@ -88,11 +99,18 @@ TCA8418::Error TCA8418::configureGpio(pin_t *pins, uint8_t pins_count, bool) {
   TRY_ERR(modifyRegister(register_t::GPIO_DIR2, 0x00, reg_data_mask[1]));
   TRY_ERR(modifyRegister(register_t::GPIO_DIR3, 0x00, reg_data_mask[2]));
 
-  // Set interrupt mode high to low transition (GPIO_INT_LVL1–3) write 0s here
-  // (high to low)
-  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL1, 0x00, reg_data_mask[0]));
-  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL2, 0x00, reg_data_mask[1]));
-  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL3, 0x00, reg_data_mask[2]));
+  // Set interrupt mode (GPIO_INT_LVL1–3)
+  // for int-on-low, write 0s here, else 1.
+  auto intMask = config->InterruptOnRisingEdge ? 0xFF : 0x00;
+  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL1, intMask, reg_data_mask[0]));
+  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL2, intMask, reg_data_mask[1]));
+  TRY_ERR(modifyRegister(register_t::GPIO_INT_LVL3, intMask, reg_data_mask[2]));
+
+  if (!config->EnablePullups) {
+    TRY_ERR(modifyRegister(register_t::GPIO_PULL1, 0xFF, reg_data_mask[0]));
+    TRY_ERR(modifyRegister(register_t::GPIO_PULL2, 0xFF, reg_data_mask[1]));
+    TRY_ERR(modifyRegister(register_t::GPIO_PULL3, 0xFF, reg_data_mask[2]));
+  }
 
   // Enable GPIO Interrupts
   TRY_ERR(modifyRegister(register_t::CFG, 1, 0x02));
