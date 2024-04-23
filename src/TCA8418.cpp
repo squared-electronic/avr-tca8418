@@ -163,13 +163,16 @@ TCA8418::Error TCA8418::writeRegister(register_t register_address, uint8_t data)
 }
 
 TCA8418::Error TCA8418::modifyRegister(register_t register_address, uint8_t data, uint8_t mask) {
-  uint8_t registerData = 0;
-  TRY_ERR(readRegister(register_address, &registerData));
+  uint8_t originalData = 0;
+  TRY_ERR(readRegister(register_address, &originalData));
 
-  registerData &= ~mask;
-  registerData |= (data & mask);
+  uint8_t newData = originalData;
+  newData &= ~mask;
+  newData |= (data & mask);
 
-  TRY_ERR(writeRegister(register_address, registerData));
+  if (newData != originalData) {
+    TRY_ERR(writeRegister(register_address, newData));
+  }
 
   return NO_ERROR;
 }
