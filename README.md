@@ -10,13 +10,12 @@ This is a driver for the TCA8418 for AVR microcontrollers.
 
 - Interrupt-driven only
 - Reports key presses, releases, and holds.
+- Supports callbacks for key presses and releases
 - Properly reports multi-key presses, holds, and releases
 - Support GPIO interrupt-driven inputs
-- All hardware row and column keypad configurations supported
+- Small SRAM size for all device 80-key and 18-GPIO support
 - `wasKeyPressed`, `wasKeyReleased`, `isKeyHeld` simple API
-- 46 bytes of SRAM required for full for 80-key and 18-GPIO map space
 - Provides error codes on all I2C operations which may fail
-- Disables interrupts around all I2C communication to prevent reading/writing garbage
 
 ## Not Supported
 
@@ -27,7 +26,7 @@ This is a driver for the TCA8418 for AVR microcontrollers.
 
 - Initialize I2C
 - Enable an external interrupt on falling edge, and connect the TCA8418's INT pin to the MCU
-- Add an interrupt vector, and call `handleInterrupt` inside
+- Call `handleInterrupt` in the main loop if the external interrupt was triggered
 - Place `updateButtonStates` at the beginning of the main loop to process any pending interrupt events to be observable by the API on this loop
 
 The `wasKeyPressed` and similar API is guaranteed to only return `true` once, then be false after the next call to `updateButtonStates`, unless the key is re-pressed. Use `isKeyHeld` to detect holds. This prevents duplicate events on checking for a key press on each loop.
@@ -64,12 +63,22 @@ void initInterrupts() {
   EIMSK |= _BV(INT1);
 }
 
-TCA8418 Keypad;
+volatile bool CheckKeypad = false;
+
+void onKeyPressed(uint8_t keyCode) {
+  // Do something with key press....
+}
+
+void onKeyReleased(uint8_t keyCode) {
+  // Do something with key release....
+}
 
 int main() {
   initI2c();
   initInterrupts();
   sei();
+
+  TCA8418 keypad;
 
   TCA8418::row_t key_rows[] = {TCA8418::row_t::ROW0, TCA8418::row_t::ROW1, TCA8418::row_t::ROW2,
                                TCA8418::row_t::ROW3};
@@ -96,7 +105,10 @@ int main() {
           },
   };
 
-  auto error = Keypad.begin(&c);
+  keypad.setKeyPressedCallback(onKeyPressed);
+  keypad.setKeyReleasedCallback(onKeyReleased);
+
+  auto error = keypad.begin(&c);
 
   if (error) {
     // Handle error...
@@ -108,12 +120,18 @@ int main() {
   };
 
   while (1) {
-    Keypad.updateButtonStates();
+    if (CheckKeypad) {
+      keypad.handleInterrupt();
+      CheckKeypad = false;
+    }
 
+    keypad.updateButtonStates();
+
+    // Check for keys directly, or rely on the onKeyPress and onKeyRelease callbacks.
     for (uint8_t i = 0; i < sizeof(keyCodes); ++i) {
-      if (Keypad.wasKeyPressed(keyCodes[i])) {
+      if (keypad.wasKeyPressed(keyCodes[i])) {
         // Handle key press
-      } else if (Keypad.wasKeyReleased(keyCodes[i])) {
+      } else if (keypad.wasKeyReleased(keyCodes[i])) {
         // Handle key release
       }
     }
@@ -123,6 +141,6 @@ int main() {
 }
 
 ISR(INT1_vect) {
-  Keypad.handleInterrupt();
+  CheckKeypad = true;
 }
 ```
