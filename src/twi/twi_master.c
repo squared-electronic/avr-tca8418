@@ -69,7 +69,7 @@ static ret_code_t tw_write_sla(uint8_t sla) {
   return SUCCESS;
 }
 
-static ret_code_t tw_write(uint8_t data) {
+ret_code_t tw_write(uint8_t data) {
   /* Transmit 1 byte*/
 #if DEBUG_LOG
   printf(BG "Write data byte: 0x%02X..." RESET, data);
@@ -116,18 +116,13 @@ static uint8_t tw_read(bool read_ack) {
   return data;
 }
 
-ret_code_t tw_master_transmit(uint8_t slave_addr, uint8_t* p_data, uint8_t len, bool repeat_start) {
+ret_code_t tw_master_transmit(uint8_t slave_addr, const uint8_t* p_data, uint8_t len,
+                              bool repeat_start) {
   ret_code_t error_code;
 
-  /* Send START condition */
-  error_code = tw_start();
+  error_code = tw_master_setup_transmit(slave_addr);
   if (error_code != SUCCESS) {
-    return error_code;
-  }
-
-  /* Send slave address with WRITE flag */
-  error_code = tw_write_sla(TW_SLA_W(slave_addr));
-  if (error_code != SUCCESS) {
+    tw_stop();
     return error_code;
   }
 
@@ -135,6 +130,7 @@ ret_code_t tw_master_transmit(uint8_t slave_addr, uint8_t* p_data, uint8_t len, 
   for (int i = 0; i < len; ++i) {
     error_code = tw_write(p_data[i]);
     if (error_code != SUCCESS) {
+      tw_stop();
       return error_code;
     }
   }
@@ -145,6 +141,31 @@ ret_code_t tw_master_transmit(uint8_t slave_addr, uint8_t* p_data, uint8_t len, 
   }
 
   return SUCCESS;
+}
+
+ret_code_t tw_master_setup_transmit(uint8_t slave_addr) {
+  ret_code_t error_code;
+
+  /* Send START condition */
+  error_code = tw_start();
+  if (error_code != SUCCESS) {
+    tw_stop();
+    return error_code;
+  }
+
+  /* Send slave address with WRITE flag */
+  error_code = tw_write_sla(TW_SLA_W(slave_addr));
+  if (error_code != SUCCESS) {
+    tw_stop();
+    return error_code;
+  }
+
+  return SUCCESS;
+}
+
+void tw_master_end_transmit() {
+  /* Send STOP condition */
+  tw_stop();
 }
 
 ret_code_t tw_master_transmit_one(uint8_t slave_addr, uint8_t data, bool repeat_start) {
@@ -158,12 +179,14 @@ ret_code_t tw_master_receive(uint8_t slave_addr, uint8_t* p_data, uint8_t len) {
   /* Send START condition */
   error_code = tw_start();
   if (error_code != SUCCESS) {
+    tw_stop();
     return error_code;
   }
 
   /* Write slave address with READ flag */
   error_code = tw_write_sla(TW_SLA_R(slave_addr));
   if (error_code != SUCCESS) {
+    tw_stop();
     return error_code;
   }
 

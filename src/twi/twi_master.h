@@ -21,9 +21,16 @@ typedef uint8_t ret_code_t;
 extern "C" {
 #endif
 
-ret_code_t tw_master_transmit(uint8_t slave_addr, uint8_t* p_data, uint8_t len, bool repeat_start);
+// High level API
+ret_code_t tw_master_transmit(uint8_t slave_addr, const uint8_t* p_data, uint8_t len,
+                              bool repeat_start);
 ret_code_t tw_master_transmit_one(uint8_t slave_addr, uint8_t data, bool repeat_start);
 ret_code_t tw_master_receive(uint8_t slave_addr, uint8_t* p_data, uint8_t len);
+
+// Low Level API
+ret_code_t tw_master_setup_transmit(uint8_t slave_addr);
+ret_code_t tw_write(uint8_t data);
+void tw_master_end_transmit();
 
 #ifdef __cplusplus
 }
