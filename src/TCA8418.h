@@ -70,12 +70,16 @@ class TCA8418 {
     } GpioInput;
   };
 
+  typedef void (*KeyCodeCallback)(uint8_t);
+
   Error begin(const Config* c);
   void updateButtonStates();
   bool wasKeyPressed(uint8_t keyCode) const;
   bool wasKeyReleased(uint8_t keyCode) const;
   bool isKeyHeld(uint8_t keyCode) const;
   Error handleInterrupt();
+  void setKeyPressedCallback(KeyCodeCallback cb);
+  void setKeyReleasedCallback(KeyCodeCallback cb);
 
  private:
   enum class register_t : uint8_t {
@@ -135,6 +139,8 @@ class TCA8418 {
   uint8_t keysStillPushed[12];
   uint8_t pendingEvents[10];
   uint8_t pendingEventsCount = 0;
+  KeyCodeCallback keyPressCallback_{nullptr};
+  KeyCodeCallback keyReleaseCallback_{nullptr};
 };
 
 #endif

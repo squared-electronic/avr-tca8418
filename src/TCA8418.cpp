@@ -294,11 +294,24 @@ void TCA8418::updateButtonState(uint8_t pendingEvent) {
   if (eventType == key_event_type_t::PRESSED) {
     setBit(keysPushed, arrayIndex);
     setBit(keysStillPushed, arrayIndex);
+    if (keyPressCallback_) {
+      keyPressCallback_(rawKeyCode);
+    }
   } else if (eventType == key_event_type_t::RELEASED) {
     clearBit(keysPushed, arrayIndex);
     clearBit(keysStillPushed, arrayIndex);
     setBit(keysReleased, arrayIndex);
+    if (keyReleaseCallback_) {
+      keyReleaseCallback_(rawKeyCode);
+    }
   } else {
     // Can never happen
   }
+}
+void TCA8418::setKeyPressedCallback(KeyCodeCallback cb) {
+  keyPressCallback_ = cb;
+}
+
+void TCA8418::setKeyReleasedCallback(KeyCodeCallback cb) {
+  keyReleaseCallback_ = cb;
 }
