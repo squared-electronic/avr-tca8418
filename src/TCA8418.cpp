@@ -5,23 +5,6 @@
 
 #include "twi/twi_master.h"
 
-struct ScopedInterruptLock2 {
-  ScopedInterruptLock2();
-  ~ScopedInterruptLock2();
-
- private:
-  uint8_t SReg;
-};
-
-ScopedInterruptLock2::ScopedInterruptLock2() {
-  SReg = SREG;
-  cli();
-}
-
-ScopedInterruptLock2::~ScopedInterruptLock2() {
-  SREG = SReg;
-}
-
 #define TRY_ERR(function)    \
   do {                       \
     auto error = function;   \
@@ -75,7 +58,6 @@ TCA8418::Error TCA8418::configureKeypad(const TCA8418::Config::Keypad_ *config) 
 }
 
 TCA8418::Error TCA8418::configureGpioInputs(const TCA8418::Config::GpioIn_ *config) {
-  ScopedInterruptLock2 lock;
   uint8_t reg_data_mask[3] = {0, 0, 0};
   createRegisterTripleMask(config->Pins, config->PinsCount, reg_data_mask);
 
@@ -157,7 +139,6 @@ bool TCA8418::readKeyBit(const uint8_t *bytes, uint8_t rawKeyCode) const {
 }
 
 TCA8418::Error TCA8418::writeRegister(register_t register_address, uint8_t data) {
-  ScopedInterruptLock2 lock;
   uint8_t bytes[2] = {(uint8_t)register_address, data};
   return tw_master_transmit(I2C_ADDRESS, bytes, sizeof(bytes), false);
 }
@@ -178,7 +159,6 @@ TCA8418::Error TCA8418::modifyRegister(register_t register_address, uint8_t data
 }
 
 TCA8418::Error TCA8418::readRegister(register_t register_address, uint8_t *out_data) {
-  ScopedInterruptLock2 lock;
   TRY_ERR(tw_master_transmit_one(I2C_ADDRESS, static_cast<uint8_t>(register_address), true));
   TRY_ERR(tw_master_receive(I2C_ADDRESS, out_data, 1));
   return NO_ERROR;
@@ -205,8 +185,6 @@ TCA8418::Error TCA8418::handleInterrupt() {
 }
 
 void TCA8418::updateButtonStates() {
-  ScopedInterruptLock2 lock;
-
   memset(keysPushed, 0, sizeof(keysPushed));
   memset(keysReleased, 0, sizeof(keysReleased));
 
